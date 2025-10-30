@@ -6,9 +6,11 @@ import { createSession, saveSession, clearSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import styles from './login.module.css';
 
+const SITES = ['Lafto Site 1', 'Lafto Site 2', 'Lafto Site 3'] as const;
+
 export default function LoginPage() {
     const router = useRouter();
-    const [siteName, setSiteName] = useState('');
+    const [siteName, setSiteName] = useState('Lafto Site 1');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -74,14 +76,16 @@ export default function LoginPage() {
                 <h1 className={styles.title}>Sign in to Site</h1>
                 <p className={styles.subtitle}>Sign in with your Site account. Session lasts 12 hours.</p>
                 <form onSubmit={handleLogin}>
-                    <label className={styles.label}>Site Name (for reference only)</label>
-                    <input
+                    <label className={styles.label}>Site Name</label>
+                    <select
                         className={styles.input}
-                        type="text"
                         value={siteName}
                         onChange={(e) => setSiteName(e.target.value)}
-                        placeholder="e.g., Lafto Site 1"
-                    />
+                    >
+                        {SITES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                        ))}
+                    </select>
                     <label className={styles.label}>Email</label>
                     <input
                         className={styles.input}
