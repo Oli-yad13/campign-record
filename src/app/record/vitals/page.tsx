@@ -27,7 +27,6 @@ const VitalsSchema = z
 		bpArm: z.enum(['Left', 'Right']).optional(),
 		bpArmOther: z.string().optional(),
 		bpPosition: z.enum(['Sitting', 'Standing']),
-		bpTime: z.string().min(1),
 		glucoseValue: z
 			.string()
 			.optional()
@@ -89,7 +88,6 @@ export default function VitalsPage() {
 		bpArm: 'Left' as 'Left' | 'Right' | undefined,
 		bpArmOther: '',
 		bpPosition: 'Sitting' as 'Sitting' | 'Standing',
-		bpTime: '',
 		glucoseValue: '',
 		lastMealTime: '',
 		pulseRate: '',
@@ -101,32 +99,8 @@ export default function VitalsPage() {
 	});
 
 	const [errors, setErrors] = useState<Record<string, string>>({});
-	const [preview, setPreview] = useState<string | null>(null);
+	const [computed, setComputed] = useState<any | null>(null);
 	const [submitting, setSubmitting] = useState(false);
-
-	function formatPreview(payload: VitalsData, demo: any, session: any): string {
-		const lines: string[] = [];
-		lines.push('Vitals');
-		lines.push(`- BP: ${payload.bpSystolic}/${payload.bpDiastolic} (${payload.bpPosition}) at ${payload.bpTime}`);
-		lines.push(`- Arm: ${payload.includeArmPreset ? payload.bpArm : payload.bpArmOther}`);
-		lines.push(`- Pulse: ${payload.pulseRate} bpm, Temp: ${payload.temperatureC} °C, SpO2: ${payload.spo2}%`);
-		lines.push(`- Height: ${payload.heightCm ?? '—'} cm, Weight: ${payload.weightKg} kg, BMI: ${payload.bmi} (${payload.bmiCategory})`);
-		lines.push(`- Glucose: ${payload.glucoseValue ?? '—'} mg/dL (${payload.glucoseFlag}), Last meal: ${payload.lastMealTime || '—'}`);
-		if (payload.consultations?.length) lines.push(`- Consultations: ${payload.consultations.join(', ')}`);
-
-		lines.push('Demographics');
-		lines.push(`- Name: ${demo?.fullName ?? '—'} (${demo?.fatherName ?? '—'})`);
-		lines.push(`- Sex/Age: ${demo?.sex ?? '—'} / ${demo?.ageYears ?? '—'}`);
-		lines.push(`- DOB: ${demo?.dateOfBirth ?? '—'}`);
-		lines.push(`- Region: ${demo?.region ?? '—'}, Subcity/Zone: ${demo?.subCityOrZone ?? '—'}, Woreda: ${demo?.woreda ?? '—'}`);
-		lines.push(`- Phone: ${demo?.phone ?? '—'}`);
-
-		lines.push('Session');
-		lines.push(`- Site: ${session?.siteName ?? '—'} (${session?.siteId ?? '—'})`);
-		lines.push(`- Campaign: ${session?.campaignId ?? '—'}`);
-		lines.push(`- Location: ${session?.locationId ?? '—'}`);
-		return lines.join('\n');
-	}
 
 	function handleChange<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
 		setForm((f) => ({ ...f, [key]: value }));
@@ -145,7 +119,7 @@ export default function VitalsPage() {
         if (submitting) { console.log('[Vitals] ignored: already submitting'); return; }
         console.log('[Vitals] handleSubmit fired');
         setErrors({ form: 'Submitting…' });
-        setPreview(null);
+        setComputed(null);
         setSubmitting(true);
 		const parsed = VitalsSchema.safeParse(form);
         if (!parsed.success) {
@@ -216,7 +190,6 @@ export default function VitalsPage() {
 			bp_diastolic: payload.bpDiastolic,
 			bp_arm: payload.includeArmPreset ? payload.bpArm : payload.bpArmOther,
 			bp_position: payload.bpPosition,
-			bp_time: payload.bpTime,
 			glucose_value: gv,
 			last_meal_time: payload.lastMealTime || null,
 			pulse_rate: payload.pulseRate,
@@ -235,7 +208,7 @@ export default function VitalsPage() {
 		};
 
 		// Preview computed payload in human-readable text
-		try { setPreview(formatPreview(payload, demo, session)); } catch {}
+		try { setComputed({ ...payload, demo, session }); } catch {}
 
         // Insert into visits
         try {
@@ -266,16 +239,16 @@ export default function VitalsPage() {
 				<p className={styles.subtitle}>All vitals required except height and glucose (optional).</p>
 			<form noValidate onSubmit={handleSubmit}>
 					<div className={styles.grid2}>
-						<label className={styles.label}>
-							BP Systolic
-							<input className={styles.input} type="number" value={form.bpSystolic} onChange={(e) => handleChange('bpSystolic', e.target.value)} required />
-							{errors.bpSystolic && <span className={styles.error}>{errors.bpSystolic}</span>}
-						</label>
-						<label className={styles.label}>
-							BP Diastolic
-							<input className={styles.input} type="number" value={form.bpDiastolic} onChange={(e) => handleChange('bpDiastolic', e.target.value)} required />
-							{errors.bpDiastolic && <span className={styles.error}>{errors.bpDiastolic}</span>}
-						</label>
+			<label className={styles.label}>
+				BP Systolic (70–260)
+				<input className={`${styles.input} ${errors.bpSystolic ? styles.inputError : ''}`} type="number" placeholder="e.g., 120" value={form.bpSystolic} onChange={(e) => handleChange('bpSystolic', e.target.value)} required />
+				{errors.bpSystolic && <span className={styles.error}>{errors.bpSystolic}</span>}
+			</label>
+			<label className={styles.label}>
+				BP Diastolic (40–150)
+				<input className={`${styles.input} ${errors.bpDiastolic ? styles.inputError : ''}`} type="number" placeholder="e.g., 80" value={form.bpDiastolic} onChange={(e) => handleChange('bpDiastolic', e.target.value)} required />
+				{errors.bpDiastolic && <span className={styles.error}>{errors.bpDiastolic}</span>}
+			</label>
 
 						<label className={styles.label}>
 							Arm
@@ -307,46 +280,58 @@ export default function VitalsPage() {
 							</select>
 						</label>
 
-						<label className={styles.label}>
-							BP Time
-							<input className={styles.input} type="time" value={form.bpTime} onChange={(e) => handleChange('bpTime', e.target.value)} required />
-						</label>
+		
 
-						<label className={styles.label}>
-							Glucose (mg/dL) – optional
-							<input className={styles.input} type="number" inputMode="decimal" value={form.glucoseValue} onChange={(e) => handleChange('glucoseValue', e.target.value)} />
-							{errors.glucoseValue && <span className={styles.error}>{errors.glucoseValue}</span>}
-						</label>
+			<label className={styles.label}>
+				Glucose (mg/dL) – optional (30–600)
+				<input className={`${styles.input} ${errors.glucoseValue ? styles.inputError : ''}`} type="number" inputMode="decimal" placeholder="e.g., 110" value={form.glucoseValue} onChange={(e) => handleChange('glucoseValue', e.target.value)} />
+				{errors.glucoseValue && <span className={styles.error}>{errors.glucoseValue}</span>}
+			</label>
 						<label className={styles.label}>
 							Last Meal Time (optional)
 							<input className={styles.input} type="time" value={form.lastMealTime} onChange={(e) => handleChange('lastMealTime', e.target.value)} />
 						</label>
 
-						<label className={styles.label}>
-							Pulse (bpm)
-							<input className={styles.input} type="number" value={form.pulseRate} onChange={(e) => handleChange('pulseRate', e.target.value)} required />
-						</label>
-						<label className={styles.label}>
-							Temperature (°C)
-							<input className={styles.input} type="number" inputMode="decimal" value={form.temperatureC} onChange={(e) => handleChange('temperatureC', e.target.value)} required />
-						</label>
-						<label className={styles.label}>
-							SpO₂ (%)
-							<input className={styles.input} type="number" value={form.spo2} onChange={(e) => handleChange('spo2', e.target.value)} required />
-						</label>
-						<label className={styles.label}>
-							Height (cm) – optional
-							<input className={styles.input} type="number" inputMode="decimal" value={form.heightCm} onChange={(e) => handleChange('heightCm', e.target.value)} />
-							{errors.heightCm && <span className={styles.error}>{errors.heightCm}</span>}
-						</label>
-						<label className={styles.label}>
-							Weight (kg)
-							<input className={styles.input} type="number" inputMode="decimal" value={form.weightKg} onChange={(e) => handleChange('weightKg', e.target.value)} required />
-						</label>
+			<label className={styles.label}>
+				Pulse (bpm) (30–220)
+				<input className={`${styles.input} ${errors.pulseRate ? styles.inputError : ''}`} type="number" placeholder="e.g., 72" value={form.pulseRate} onChange={(e) => handleChange('pulseRate', e.target.value)} required />
+				{errors.pulseRate && <span className={styles.error}>{errors.pulseRate}</span>}
+			</label>
+			<label className={styles.label}>
+				Temperature (°C) (30–43)
+				<input className={`${styles.input} ${errors.temperatureC ? styles.inputError : ''}`} type="number" inputMode="decimal" placeholder="e.g., 36.6" value={form.temperatureC} onChange={(e) => handleChange('temperatureC', e.target.value)} required />
+				{errors.temperatureC && <span className={styles.error}>{errors.temperatureC}</span>}
+			</label>
+			<label className={styles.label}>
+				SpO₂ (%) (50–100)
+				<input className={`${styles.input} ${errors.spo2 ? styles.inputError : ''}`} type="number" placeholder="e.g., 98" value={form.spo2} onChange={(e) => handleChange('spo2', e.target.value)} required />
+				{errors.spo2 && <span className={styles.error}>{errors.spo2}</span>}
+			</label>
+			<label className={styles.label}>
+				Height (cm) – optional (50–250)
+				<input className={`${styles.input} ${errors.heightCm ? styles.inputError : ''}`} type="number" inputMode="decimal" placeholder="e.g., 170" value={form.heightCm} onChange={(e) => handleChange('heightCm', e.target.value)} />
+				{errors.heightCm && <span className={styles.error}>{errors.heightCm}</span>}
+			</label>
+
+          {/* BMI result appears between Height/Weight if both are present and valid */}
+          {(Number(form.heightCm) > 0 && Number(form.weightKg) > 0) && (() => {
+            const bmi = computeBmi(Number(form.weightKg), Number(form.heightCm));
+            return (
+              <div className={styles.bmiResult}>
+                BMI: {bmi !== null ? bmi.toFixed(1) : '--'} — {bmi !== null ? bmiCategory(bmi) : 'Not computable'}
+              </div>
+            );
+          })()}
+			<label className={styles.label}>
+				Weight (kg) (2–350)
+				<input className={`${styles.input} ${errors.weightKg ? styles.inputError : ''}`} type="number" inputMode="decimal" placeholder="e.g., 60" value={form.weightKg} onChange={(e) => handleChange('weightKg', e.target.value)} required />
+				{errors.weightKg && <span className={styles.error}>{errors.weightKg}</span>}
+			</label>
 					</div>
 
-					<div className={styles.sectionTitle}>Consultations performed</div>
-					<div className={styles.grid2}>
+					{/* Consultation dropdown and ticked list */}
+					<div className={styles.consultContainer}>
+						<div className={styles.sectionTitle}>Consultations performed</div>
 						<label className={styles.label}>
 							<select className={styles.select} onChange={(e) => { if (e.target.value) toggleConsultation(e.target.value); }}>
 								<option value="">Select to tick…</option>
@@ -355,10 +340,14 @@ export default function VitalsPage() {
 								))}
 							</select>
 						</label>
-						<div>
+						<div className={styles.consultList}>
+							{form.consultations.length === 0 && (
+								<span className={styles.label} style={{ opacity: 0.7 }}>No consultations selected yet.</span>
+							)}
 							{form.consultations.map((c) => (
-								<label key={c} className={styles.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-									<input type="checkbox" className={styles.input} checked onChange={() => toggleConsultation(c)} /> {c}
+								<label key={c} className={styles.consultItem}>
+									<input type="checkbox" checked onChange={() => toggleConsultation(c)} />
+									<span>{c}</span>
 								</label>
 							))}
 						</div>
@@ -373,10 +362,50 @@ export default function VitalsPage() {
 					</div>
 				</form>
 
-				{preview && (
-					<div className={styles.preview}>
-						<h3>Computed</h3>
-						<pre>{preview}</pre>
+				{computed && (
+					<div className={styles.computedCard}>
+						<div className={styles.computedSection}>
+							<div className={styles.computedSectionTitle}>Vitals</div>
+							<div className={styles.computedGrid}>
+								<span className={styles.computedLabel}>BP</span><span className={styles.computedValue}>{computed?.bpSystolic}/{computed?.bpDiastolic} ({computed?.bpPosition})</span>
+								<span className={styles.computedLabel}>Arm</span><span className={styles.computedValue}>{computed?.includeArmPreset ? computed?.bpArm : computed?.bpArmOther}</span>
+								<span className={styles.computedLabel}>Pulse (bpm)</span><span className={styles.computedValue}>{computed?.pulseRate}</span>
+								<span className={styles.computedLabel}>Temp (°C)</span><span className={styles.computedValue}>{computed?.temperatureC}</span>
+								<span className={styles.computedLabel}>SpO₂ (%)</span><span className={styles.computedValue}>{computed?.spo2}</span>
+								<span className={styles.computedLabel}>Height (cm)</span><span className={styles.computedValue}>{computed?.heightCm ?? '—'}</span>
+								<span className={styles.computedLabel}>Weight (kg)</span><span className={styles.computedValue}>{computed?.weightKg ?? '—'}</span>
+								<span className={styles.computedLabel}>BMI</span>
+								<span className={styles.computedValue}>
+									{computed?.bmi ? `${computed?.bmi} ` : ''}
+									<span style={{ color: '#22cf70', background: '#123521', borderRadius: 6, padding: '2px 6px', marginLeft: 4, fontSize: 12 }}>{computed?.bmiCategory ?? ''}</span>
+								</span>
+								<span className={styles.computedLabel}>BP Category</span>
+								<span className={styles.computedValue}><span style={{ color: '#35d4f5', background: '#18293b', borderRadius: 6, padding: '2px 6px', fontSize: 12 }}>{computed?.bpCategory}</span></span>
+								<span className={styles.computedLabel}>Glucose</span>
+								<span className={styles.computedValue}>{computed?.glucoseValue ?? '—'} mg/dL <span style={{ color: '#bf8cff', background: '#332259', borderRadius: 6, padding: '2px 6px', fontSize: 12 }}>{computed?.glucoseFlag}</span></span>
+								<span className={styles.computedLabel}>Last meal</span><span className={styles.computedValue}>{computed?.lastMealTime ?? '—'}</span>
+								<span className={styles.computedLabel}>Consultations</span>
+								<span className={styles.computedValue}>{computed?.consultations && computed.consultations.length ? computed.consultations.join(', ') : '—'}</span>
+							</div>
+						</div>
+						<div className={styles.computedSection}>
+							<div className={styles.computedSectionTitle}>Demographics</div>
+							<div className={styles.computedGrid}>
+								<span className={styles.computedLabel}>Name</span><span className={styles.computedValue}>{computed?.demo?.fullName} ({computed?.demo?.fatherName})</span>
+								<span className={styles.computedLabel}>Sex/Age</span><span className={styles.computedValue}>{computed?.demo?.sex} / {computed?.demo?.ageYears}</span>
+								<span className={styles.computedLabel}>DOB</span><span className={styles.computedValue}>{computed?.demo?.dateOfBirth}</span>
+								<span className={styles.computedLabel}>Region</span><span className={styles.computedValue}>{computed?.demo?.region}, {computed?.demo?.subCityOrZone} ({computed?.demo?.woreda})</span>
+								<span className={styles.computedLabel}>Phone</span><span className={styles.computedValue}>{computed?.demo?.phone ?? '—'}</span>
+							</div>
+						</div>
+						<div className={styles.computedSection}>
+							<div className={styles.computedSectionTitle}>Session</div>
+							<div className={styles.computedGrid}>
+								<span className={styles.computedLabel}>Site</span><span className={styles.computedValue}>{computed?.session?.siteName} ({computed?.session?.siteId})</span>
+								<span className={styles.computedLabel}>Campaign</span><span className={styles.computedValue}>{computed?.session?.campaignId}</span>
+								<span className={styles.computedLabel}>Location</span><span className={styles.computedValue}>{computed?.session?.locationId}</span>
+							</div>
+						</div>
 					</div>
 				)}
 			</div>

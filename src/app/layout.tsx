@@ -28,6 +28,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <SwRegister />
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#fff', borderBottom: '1px solid #ededed', boxSizing: 'border-box' }}>
+          <img src="/psi.jpg" alt="PSI logo" style={{ height: 48, width: 'auto', maxWidth: 180, objectFit: 'contain' }} />
+          <img src="/tihut%20clinic%20logo%20(2).png" alt="Tihut Medium Clinic logo" style={{ height: 48, width: 'auto', maxWidth: 340, objectFit: 'contain' }} />
+        </div>
         <AuthGate>
           {children}
         </AuthGate>
