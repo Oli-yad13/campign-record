@@ -10,7 +10,7 @@ import styles from './new.module.css';
 const DemographicsSchema = z.object({
 	fullName: z.string().min(1, 'Full name is required'),
 	fatherName: z.string().min(1, 'Father name is required'),
-	sex: z.enum(['Male', 'Female'], { required_error: 'Sex is required' }),
+	sex: z.enum(['Male', 'Female']),
 	ageYears: z
 		.string()
 		.min(1, 'Age is required')
