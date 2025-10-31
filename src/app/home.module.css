@@ -2,19 +2,19 @@
 	min-height: 100dvh;
 	display: grid;
 	place-items: center;
-	background: #0b1020;
+	background: var(--background);
 	padding: 24px;
 }
 
 .card {
 	width: 100%;
 	max-width: 720px;
-	background: #0f162e;
-	border: 1px solid #1f2a4a;
+	background: var(--foreground);
+	border: 1px solid var(--border);
 	border-radius: 14px;
 	box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 	padding: 20px;
-	color: #eef2ff;
+	color: var(--text);
 }
 
 .header {
@@ -31,7 +31,7 @@
 }
 
 .site {
-	color: #b8c1ec;
+	color: var(--text);
 	font-size: 14px;
 }
 
@@ -53,13 +53,14 @@
 }
 
 .secondaryBtn {
-	background: #1b2646;
-	border: 1px solid #334174;
-	color: #c9d4ff;
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--text);
 	padding: 10px 14px;
 	border-radius: 10px;
 	cursor: pointer;
 }
+
 
 
 
