@@ -39,3 +39,5 @@ export function glucoseFlag(valueMgDl: number, type: 'fasting' | 'random'): 'Nor
 
 
 
+
+

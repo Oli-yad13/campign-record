@@ -8,8 +8,9 @@ import styles from './new.module.css';
 // consultations are handled on the vitals page
 
 const DemographicsSchema = z.object({
-	fullName: z.string().min(1, 'Full name is required'),
+	clientName: z.string().min(1, 'Client name is required'),
 	fatherName: z.string().min(1, 'Father name is required'),
+	grandfatherName: z.string().min(1, 'Grandfather name is required'),
 	sex: z.enum(['Male', 'Female']),
 	ageYears: z
 		.string()
@@ -40,9 +41,10 @@ function computeDobFromAge(ageYears: number): string {
 
 export default function NewRecordPage() {
     const router = useRouter();
-    const [form, setForm] = useState({
-		fullName: '',
+	const [form, setForm] = useState({
+		clientName: '',
 		fatherName: '',
+		grandfatherName: '',
 		sex: '' as 'Male' | 'Female' | '',
 		ageYears: '',
 		region: 'Addis Ababa' as (typeof ETHIOPIA_REGIONS)[number],
@@ -109,19 +111,19 @@ export default function NewRecordPage() {
                 <form onSubmit={handleSubmit}>
                     <div className={styles.grid2}>
                         <label className={styles.label}>
-                            Full Name
+                            Client Name
                             <input
                                 className={styles.input}
                                 type="text"
-                                value={form.fullName}
-                                onChange={(e) => handleChange('fullName', e.target.value)}
+                                value={form.clientName}
+                                onChange={(e) => handleChange('clientName', e.target.value)}
                                 required
                             />
-                            {errors.fullName && <span className={styles.error}>{errors.fullName}</span>}
+                            {errors.clientName && <span className={styles.error}>{errors.clientName}</span>}
                         </label>
 
 					<label className={styles.label}>
-						Father Name
+						Father's Name
 						<input
 							className={styles.input}
 							type="text"
@@ -130,6 +132,18 @@ export default function NewRecordPage() {
 							required
 						/>
 						{errors.fatherName && <span className={styles.error}>{errors.fatherName}</span>}
+					</label>
+
+					<label className={styles.label}>
+						Grandfather's Name
+						<input
+							className={styles.input}
+							type="text"
+							value={form.grandfatherName}
+							onChange={(e) => handleChange('grandfatherName', e.target.value)}
+							required
+						/>
+						{errors.grandfatherName && <span className={styles.error}>{errors.grandfatherName}</span>}
 					</label>
 
 					<label className={styles.label}>
@@ -236,7 +250,7 @@ export default function NewRecordPage() {
 
 				{savedPayload && (
 					<div className={styles.preview}>
-						<div><strong>Full Name:</strong> {savedPayload.fullName}</div>
+						<div><strong>Name:</strong> {savedPayload.clientName} {savedPayload.fatherName} {savedPayload.grandfatherName}</div>
 						<div><strong>Sex:</strong> {savedPayload.sex}</div>
 						<div><strong>Age:</strong> {savedPayload.ageYears} (DOB {savedPayload.dateOfBirth})</div>
                         

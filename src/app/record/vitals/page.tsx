@@ -47,10 +47,9 @@ const VitalsSchema = z
 			.refine((n) => n >= 30 && n <= 43),
 		spo2: z
 			.string()
-			.min(1)
-			.refine((v) => /^\d+$/.test(v))
-			.transform((v) => parseInt(v, 10))
-			.refine((n) => n >= 50 && n <= 100),
+			.optional()
+			.transform((v) => (v && v.trim().length ? parseInt(v, 10) : undefined))
+			.refine((n) => n === undefined || (typeof n === 'number' && n >= 50 && n <= 100), 'SpO₂ must be 50–100'),
 		heightCm: z
 			.string()
 			.optional()
@@ -176,8 +175,9 @@ export default function VitalsPage() {
 			device_id: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
 			created_by_site_account: session.supabaseUserId,
 
-			full_name: demo.fullName,
+			client_name: demo.clientName,
 			father_name: demo.fatherName,
+			grandfather_name: demo.grandfatherName,
 			sex: demo.sex,
 			age_years: demo.ageYears,
 			date_of_birth: demo.dateOfBirth,
@@ -194,7 +194,7 @@ export default function VitalsPage() {
 			last_meal_time: payload.lastMealTime || null,
 			pulse_rate: payload.pulseRate,
 			temperature_c: payload.temperatureC,
-			spo2: payload.spo2,
+			spo2: payload.spo2 ?? null,
 			height_cm: payload.heightCm ?? null,
 			weight_kg: payload.weightKg,
 
@@ -236,7 +236,7 @@ export default function VitalsPage() {
 		<div className={styles.wrap}>
 			<div className={styles.card}>
 				<h1 className={styles.title}>New Record – Vitals</h1>
-				<p className={styles.subtitle}>All vitals required except height and glucose (optional).</p>
+				<p className={styles.subtitle}>All vitals required except height, glucose, and SpO₂ (optional).</p>
 			<form noValidate onSubmit={handleSubmit}>
 					<div className={styles.grid2}>
 			<label className={styles.label}>
@@ -303,8 +303,8 @@ export default function VitalsPage() {
 				{errors.temperatureC && <span className={styles.error}>{errors.temperatureC}</span>}
 			</label>
 			<label className={styles.label}>
-				SpO₂ (%) (50–100)
-				<input className={`${styles.input} ${errors.spo2 ? styles.inputError : ''}`} type="number" placeholder="e.g., 98" value={form.spo2} onChange={(e) => handleChange('spo2', e.target.value)} required />
+				SpO₂ (%) – optional (50–100)
+				<input className={`${styles.input} ${errors.spo2 ? styles.inputError : ''}`} type="number" placeholder="e.g., 98" value={form.spo2} onChange={(e) => handleChange('spo2', e.target.value)} />
 				{errors.spo2 && <span className={styles.error}>{errors.spo2}</span>}
 			</label>
 			<label className={styles.label}>
@@ -371,7 +371,7 @@ export default function VitalsPage() {
 								<span className={styles.computedLabel}>Arm</span><span className={styles.computedValue}>{computed?.includeArmPreset ? computed?.bpArm : computed?.bpArmOther}</span>
 								<span className={styles.computedLabel}>Pulse (bpm)</span><span className={styles.computedValue}>{computed?.pulseRate}</span>
 								<span className={styles.computedLabel}>Temp (°C)</span><span className={styles.computedValue}>{computed?.temperatureC}</span>
-								<span className={styles.computedLabel}>SpO₂ (%)</span><span className={styles.computedValue}>{computed?.spo2}</span>
+								<span className={styles.computedLabel}>SpO₂ (%)</span><span className={styles.computedValue}>{computed?.spo2 ?? '—'}</span>
 								<span className={styles.computedLabel}>Height (cm)</span><span className={styles.computedValue}>{computed?.heightCm ?? '—'}</span>
 								<span className={styles.computedLabel}>Weight (kg)</span><span className={styles.computedValue}>{computed?.weightKg ?? '—'}</span>
 								<span className={styles.computedLabel}>BMI</span>
@@ -391,7 +391,7 @@ export default function VitalsPage() {
 						<div className={styles.computedSection}>
 							<div className={styles.computedSectionTitle}>Demographics</div>
 							<div className={styles.computedGrid}>
-								<span className={styles.computedLabel}>Name</span><span className={styles.computedValue}>{computed?.demo?.fullName} ({computed?.demo?.fatherName})</span>
+								<span className={styles.computedLabel}>Name</span><span className={styles.computedValue}>{computed?.demo?.clientName} {computed?.demo?.fatherName} {computed?.demo?.grandfatherName}</span>
 								<span className={styles.computedLabel}>Sex/Age</span><span className={styles.computedValue}>{computed?.demo?.sex} / {computed?.demo?.ageYears}</span>
 								<span className={styles.computedLabel}>DOB</span><span className={styles.computedValue}>{computed?.demo?.dateOfBirth}</span>
 								<span className={styles.computedLabel}>Region</span><span className={styles.computedValue}>{computed?.demo?.region}, {computed?.demo?.subCityOrZone} ({computed?.demo?.woreda})</span>
