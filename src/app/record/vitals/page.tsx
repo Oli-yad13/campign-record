@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { COMMON_CONSULTATIONS } from '@/data/consultations';
 import { bpCategory, bmiCategory, computeBmi } from '@/lib/vitals';
@@ -62,12 +62,27 @@ const VitalsSchema = z
 			.transform((v) => Number(v))
 			.refine((n) => n >= 2 && n <= 350),
         consultations: z.array(z.string()).optional().default([]),
+		// Examinations fields (all optional)
+		breastExaminationResult: z.enum(['P', 'N', 'NA']).optional(),
+		hivTestProvided: z.enum(['Y', 'N']).optional(),
+		hivTestResult: z.enum(['P', 'N']).optional(),
+		hivstKitGiven: z.enum(['Yes', 'No']).optional(),
+		hivstResult: z.enum(['R', 'NR']).optional(),
+		remarks: z.string().optional(),
 	})
 	.superRefine((val, ctx) => {
 		if (val.includeArmPreset) {
 			if (!val.bpArm) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['bpArm'], message: 'Required' });
 		} else {
 			if (!val.bpArmOther || !val.bpArmOther.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['bpArmOther'], message: 'Enter arm' });
+		}
+		// HIV test result only required if test provided = Y
+		if (val.hivTestProvided === 'Y' && !val.hivTestResult) {
+			ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['hivTestResult'], message: 'Enter HIV test result if test provided' });
+		}
+		// HIVST result only required if kit given = Yes
+		if (val.hivstKitGiven === 'Yes' && !val.hivstResult) {
+			ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['hivstResult'], message: 'Enter HIVST result if kit given' });
 		}
 	});
 
@@ -95,11 +110,19 @@ export default function VitalsPage() {
 		heightCm: '',
 		weightKg: '',
 		consultations: [] as string[],
+		breastExaminationResult: undefined as 'P' | 'N' | 'NA' | undefined,
+		hivTestProvided: undefined as 'Y' | 'N' | undefined,
+		hivTestResult: undefined as 'P' | 'N' | undefined,
+		hivstKitGiven: undefined as 'Yes' | 'No' | undefined,
+		hivstResult: undefined as 'R' | 'NR' | undefined,
+		remarks: '',
 	});
 
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [computed, setComputed] = useState<any | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+	const [showRemarksModal, setShowRemarksModal] = useState(false);
+	const [clientSex, setClientSex] = useState<'Male' | 'Female' | null>(null);
 
 	function handleChange<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
 		setForm((f) => ({ ...f, [key]: value }));
@@ -112,6 +135,21 @@ export default function VitalsPage() {
             return { ...f, consultations: Array.from(set) };
         });
     }
+
+	// Load demographics to get client sex
+	useEffect(() => {
+		const demoRaw = localStorage.getItem('campaignmrs:lastDemographics');
+		if (demoRaw) {
+			try {
+				const demo = JSON.parse(demoRaw);
+				setClientSex(demo.sex || null);
+				// Auto-set breast exam to NA for males
+				if (demo.sex === 'Male') {
+					setForm((f) => ({ ...f, breastExaminationResult: 'NA' }));
+				}
+			} catch {}
+		}
+	}, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -204,7 +242,15 @@ export default function VitalsPage() {
 			glucose_flag: payload.glucoseFlag,
 
 			// store consultations as text array if column added later; ignored otherwise
-			consultations: payload.consultations || null
+			consultations: payload.consultations || null,
+
+			// Examinations fields
+			breast_examination_result: payload.breastExaminationResult || null,
+			hiv_test_provided: payload.hivTestProvided || null,
+			hiv_test_result: payload.hivTestResult || null,
+			hivst_kit_given: payload.hivstKitGiven || null,
+			hivst_result: payload.hivstResult || null,
+			remarks: payload.remarks?.trim() || null,
 		};
 
 		// Preview computed payload in human-readable text
@@ -356,10 +402,108 @@ export default function VitalsPage() {
 						</div>
 					</div>
 
+					{/* Examinations & Testing Section */}
+					<div className={styles.consultContainer}>
+						<div className={styles.sectionTitle}>Examinations & Testing</div>
+						
+						{/* Breast Examination - only show for Female */}
+						{clientSex === 'Female' && (
+							<label className={styles.label}>
+								Breast Examination Result
+								<select 
+									className={styles.select} 
+									value={form.breastExaminationResult || ''} 
+									onChange={(e) => handleChange('breastExaminationResult', e.target.value as 'P' | 'N' | undefined)}
+								>
+									<option value="">— Select —</option>
+									<option value="P">P (Positive findings)</option>
+									<option value="N">N (No abnormalities)</option>
+								</select>
+								<span className={styles.hint}>For female clients only. P=Positive findings, N=No abnormalities.</span>
+							</label>
+						)}
+
+						{/* HIV Testing */}
+						<div className={styles.hivContainer}>
+							<label className={styles.label}>
+								HIV Testing
+								<select 
+									className={styles.select} 
+									value={form.hivTestProvided || ''} 
+									onChange={(e) => {
+										const val = e.target.value as 'Y' | 'N' | '';
+										handleChange('hivTestProvided', val === '' ? undefined : val);
+										if (val !== 'Y') handleChange('hivTestResult', undefined);
+									}}
+								>
+									<option value="">— Select —</option>
+									<option value="Y">Y (Test provided)</option>
+									<option value="N">N (Not provided)</option>
+								</select>
+							</label>
+							{form.hivTestProvided === 'Y' && (
+								<label className={styles.label}>
+									HIV Test Result
+									<select 
+										className={styles.select} 
+										value={form.hivTestResult || ''} 
+										onChange={(e) => handleChange('hivTestResult', e.target.value as 'P' | 'N' | undefined)}
+									>
+										<option value="">— Select —</option>
+										<option value="P">P (Positive)</option>
+										<option value="N">N (Negative)</option>
+									</select>
+								</label>
+							)}
+						</div>
+
+						{/* HIV Self-Test */}
+						<div className={styles.hivContainer}>
+							<label className={styles.label}>
+								HIV Self-Test (HIVST)
+								<select 
+									className={styles.select} 
+									value={form.hivstKitGiven || ''} 
+									onChange={(e) => {
+										const val = e.target.value as 'Yes' | 'No' | '';
+										handleChange('hivstKitGiven', val === '' ? undefined : val);
+										if (val !== 'Yes') handleChange('hivstResult', undefined);
+									}}
+								>
+									<option value="">— Select —</option>
+									<option value="Yes">Yes (Kit given)</option>
+									<option value="No">No (Not given)</option>
+								</select>
+							</label>
+							{form.hivstKitGiven === 'Yes' && (
+								<label className={styles.label}>
+									HIVST Result
+									<select 
+										className={styles.select} 
+										value={form.hivstResult || ''} 
+										onChange={(e) => handleChange('hivstResult', e.target.value as 'R' | 'NR' | undefined)}
+									>
+										<option value="">— Select —</option>
+										<option value="R">R (Reactive)</option>
+										<option value="NR">NR (Non-reactive)</option>
+									</select>
+								</label>
+							)}
+						</div>
+					</div>
+
 					{errors.form && (
 						<p className={styles.error}>{errors.form}</p>
 					)}
 					<div className={styles.actions}>
+						<button 
+							className={styles.remarksBtn} 
+							type="button" 
+							onClick={() => setShowRemarksModal(true)}
+							disabled={submitting}
+						>
+							{form.remarks ? '✏️ Edit Remarks' : '➕ Add Remarks'}
+						</button>
 						<button className={styles.primaryBtn} type="submit" disabled={submitting}>
 							{submitting ? 'Saved! Redirecting...' : 'Save Vitals'}
 						</button>
@@ -414,6 +558,33 @@ export default function VitalsPage() {
 					</div>
 				)}
 			</div>
+
+			{/* Remarks Modal */}
+			{showRemarksModal && (
+				<div className={styles.modalOverlay} onClick={() => setShowRemarksModal(false)}>
+					<div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+						<h2 className={styles.modalTitle}>Remarks</h2>
+						<p className={styles.modalHint}>Add notes such as referrals, follow-up appointments, or special observations.</p>
+						<textarea
+							className={styles.modalTextarea}
+							value={form.remarks}
+							onChange={(e) => handleChange('remarks', e.target.value)}
+							placeholder="e.g., Client referred for confirmatory testing, Follow-up appointment on 2025-01-15, Special observation..."
+							rows={8}
+							autoFocus
+						/>
+						<div className={styles.modalActions}>
+							<button 
+								className={styles.modalBtn} 
+								type="button"
+								onClick={() => setShowRemarksModal(false)}
+							>
+								Done
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

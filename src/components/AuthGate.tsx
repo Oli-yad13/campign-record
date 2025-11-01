@@ -19,21 +19,46 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 			}
 
 			// Require both a Supabase auth session and our 12h-capped site session
-			const { data } = await supabase.auth.getSession();
-			const siteSession = getSession();
-			if (!data.session || !siteSession) {
-				router.replace('/login');
-				return;
-			}
+			try {
+				const { data, error: sessionError } = await supabase.auth.getSession();
+				
+				// If there's a refresh token error, clear everything and redirect to login
+				if (sessionError) {
+					console.warn('Session check failed:', sessionError.message);
+					await supabase.auth.signOut();
+					localStorage.removeItem('campaignmrs:siteSession');
+					router.replace('/login');
+					return;
+				}
 
-			// Optional: soft reminder when < 30min left
-			const remaining = getSessionRemainingMs();
-			if (remaining <= 0) {
-				router.replace('/login');
-				return;
-			}
+				const siteSession = getSession();
+				if (!data.session || !siteSession) {
+					router.replace('/login');
+					return;
+				}
 
-			setReady(true);
+				// Optional: soft reminder when < 30min left
+				const remaining = getSessionRemainingMs();
+				if (remaining <= 0) {
+					await supabase.auth.signOut();
+					router.replace('/login');
+					return;
+				}
+
+				setReady(true);
+			} catch (err: any) {
+				// Handle refresh token errors gracefully
+				if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh')) {
+					console.warn('Refresh token error, clearing session:', err.message);
+					await supabase.auth.signOut().catch(() => {});
+					localStorage.removeItem('campaignmrs:siteSession');
+					router.replace('/login');
+					return;
+				}
+				// For other errors, still redirect to login
+				console.error('Auth check error:', err);
+				router.replace('/login');
+			}
 		};
 
 		run();
