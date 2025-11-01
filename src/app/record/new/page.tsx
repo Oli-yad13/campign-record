@@ -8,7 +8,7 @@ import styles from './new.module.css';
 // consultations are handled on the vitals page
 
 const DemographicsSchema = z.object({
-	clientName: z.string().min(1, 'Client name is required'),
+	clientName: z.string().min(1, 'Name is required'),
 	fatherName: z.string().min(1, 'Father name is required'),
 	grandfatherName: z.string().min(1, 'Grandfather name is required'),
 	sex: z.enum(['Male', 'Female']),
@@ -66,6 +66,7 @@ export default function NewRecordPage() {
 
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [savedPayload, setSavedPayload] = useState<DemographicsData | null>(null);
+	const [saving, setSaving] = useState(false);
 
 	function handleChange<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
 		setForm((f) => ({ ...f, [key]: value }));
@@ -96,8 +97,11 @@ export default function NewRecordPage() {
             const key = 'campaignmrs:lastDemographics';
             localStorage.setItem(key, JSON.stringify(payload));
             setSavedPayload(payload);
-            // Navigate to vitals after saving demographics
-            router.replace('/record/vitals');
+            setSaving(true);
+            // Navigate to vitals after 4 seconds
+            setTimeout(() => {
+                router.replace('/record/vitals');
+            }, 4000);
         } catch {}
 	}
 
@@ -111,7 +115,7 @@ export default function NewRecordPage() {
                 <form onSubmit={handleSubmit}>
                     <div className={styles.grid2}>
                         <label className={styles.label}>
-                            Client Name
+                            Name
                             <input
                                 className={styles.input}
                                 type="text"
@@ -243,8 +247,10 @@ export default function NewRecordPage() {
                     {/* Consultation moved to vitals page */}
 
                     <div className={styles.actions}>
-                        <button className={styles.primaryBtn} type="submit">Save Demographics</button>
-                        <button className={styles.secondaryBtn} type="button" onClick={() => history.back()}>Cancel</button>
+                        <button className={styles.primaryBtn} type="submit" disabled={saving}>
+                            {saving ? 'Saved! Redirecting...' : 'Save Demographics'}
+                        </button>
+                        <button className={styles.secondaryBtn} type="button" onClick={() => history.back()} disabled={saving}>Cancel</button>
                     </div>
                 </form>
 

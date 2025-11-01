@@ -175,7 +175,7 @@ export default function VitalsPage() {
 			device_id: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
 			created_by_site_account: session.supabaseUserId,
 
-			client_name: demo.clientName,
+			name: demo.clientName,
 			father_name: demo.fatherName,
 			grandfather_name: demo.grandfatherName,
 			sex: demo.sex,
@@ -226,10 +226,13 @@ export default function VitalsPage() {
             setSubmitting(false);
             return;
         }
-		// Success: clear temp cache and go home
+		// Success: clear temp cache and go home after 3 seconds
 		try { localStorage.removeItem('campaignmrs:lastDemographics'); } catch {}
-		setSubmitting(false);
-		router.replace('/');
+		// Navigate to home after 3 seconds
+		setTimeout(() => {
+			setSubmitting(false);
+			router.replace('/');
+		}, 3000);
 	}
 
 	return (
@@ -357,8 +360,10 @@ export default function VitalsPage() {
 						<p className={styles.error}>{errors.form}</p>
 					)}
 					<div className={styles.actions}>
-						<button className={styles.primaryBtn} type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Save Vitals'}</button>
-						<button className={styles.secondaryBtn} type="button" onClick={() => history.back()}>Cancel</button>
+						<button className={styles.primaryBtn} type="submit" disabled={submitting}>
+							{submitting ? 'Saved! Redirecting...' : 'Save Vitals'}
+						</button>
+						<button className={styles.secondaryBtn} type="button" onClick={() => history.back()} disabled={submitting}>Cancel</button>
 					</div>
 				</form>
 
