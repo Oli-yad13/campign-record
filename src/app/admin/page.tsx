@@ -23,6 +23,12 @@ type Visit = {
   site_id?: string | null;
   campaign_id?: string | null;
   location_id?: string | null;
+  breast_examination_result?: string | null;
+  hiv_test_provided?: string | null;
+  hiv_test_result?: string | null;
+  hivst_kit_given?: string | null;
+  hivst_result?: string | null;
+  remarks?: string | null;
 };
 
 export default function AdminPage() {
@@ -41,7 +47,7 @@ export default function AdminPage() {
       const to = from + pageSize - 1;
       let query = supabase
         .from('visits')
-        .select('id,created_at,full_name,father_name,sex,age_years,bp_systolic,bp_diastolic,pulse_rate,temperature_c,spo2,glucose_value,bmi,bmi_category,bp_category,site_id,campaign_id,location_id', { count: 'exact' })
+        .select('id,created_at,full_name,father_name,sex,age_years,bp_systolic,bp_diastolic,pulse_rate,temperature_c,spo2,glucose_value,bmi,bmi_category,bp_category,site_id,campaign_id,location_id,breast_examination_result,hiv_test_provided,hiv_test_result,hivst_kit_given,hivst_result,remarks', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -63,7 +69,7 @@ export default function AdminPage() {
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page]);
 
   function exportCsv() {
-    const headers = ['Created At','Full Name','Father Name','Sex','Age','BP','Pulse','Temp C','SpO2','Glucose','BMI','BMI Cat','BP Cat','Site','Campaign','Location'];
+    const headers = ['Created At','Full Name','Father Name','Sex','Age','BP','Pulse','Temp C','SpO2','Glucose','BMI','BMI Cat','BP Cat','Breast Exam','HIV Test Provided','HIV Test Result','HIVST Kit Given','HIVST Result','Remarks','Site','Campaign','Location'];
     const lines = rows.map(r => [
       r.created_at || '',
       r.full_name || '',
@@ -78,6 +84,12 @@ export default function AdminPage() {
       r.bmi ?? '',
       r.bmi_category || '',
       r.bp_category || '',
+      r.breast_examination_result || '',
+      r.hiv_test_provided || '',
+      r.hiv_test_result || '',
+      r.hivst_kit_given || '',
+      r.hivst_result || '',
+      r.remarks || '',
       r.site_id || '',
       r.campaign_id || '',
       r.location_id || ''
@@ -104,45 +116,61 @@ export default function AdminPage() {
       </div>
 
       <div className={styles.card}>
-        <table className={styles.table}>
-          <thead className={styles.thead}>
-            <tr>
-              <th className={styles.th}>Created</th>
-              <th className={styles.th}>Name</th>
-              <th className={styles.th}>Sex/Age</th>
-              <th className={styles.th}>BP</th>
-              <th className={styles.th}>Pulse</th>
-              <th className={styles.th}>Temp</th>
-              <th className={styles.th}>SpO₂</th>
-              <th className={styles.th}>Glucose</th>
-              <th className={styles.th}>BMI</th>
-              <th className={styles.th}>Categories</th>
-              <th className={styles.th}>Site</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className={styles.td}>{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</td>
-                <td className={styles.td}>{r.full_name} {r.father_name ? `(${r.father_name})` : ''}</td>
-                <td className={styles.td}>{r.sex} / {r.age_years ?? ''}</td>
-                <td className={styles.td}>{r.bp_systolic != null && r.bp_diastolic != null ? `${r.bp_systolic}/${r.bp_diastolic}` : ''}</td>
-                <td className={styles.td}>{r.pulse_rate ?? ''}</td>
-                <td className={styles.td}>{r.temperature_c ?? ''}</td>
-                <td className={styles.td}>{r.spo2 ?? ''}</td>
-                <td className={styles.td}>{r.glucose_value ?? ''}</td>
-                <td className={styles.td}>{r.bmi ?? ''} {r.bmi_category ? `(${r.bmi_category})` : ''}</td>
-                <td className={styles.td}>{[r.bp_category].filter(Boolean).join(' / ')}</td>
-                <td className={styles.td}>{r.site_id}</td>
-              </tr>
-            ))}
-            {!rows.length && !loading && (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead className={styles.thead}>
               <tr>
-                <td className={styles.td} colSpan={11}>No data</td>
+                <th className={styles.th}>Created</th>
+                <th className={styles.th}>Name</th>
+                <th className={styles.th}>Sex/Age</th>
+                <th className={styles.th}>BP</th>
+                <th className={styles.th}>Pulse</th>
+                <th className={styles.th}>Temp</th>
+                <th className={styles.th}>SpO₂</th>
+                <th className={styles.th}>Glucose</th>
+                <th className={styles.th}>BMI</th>
+                <th className={styles.th}>Categories</th>
+                <th className={styles.th}>Breast Exam</th>
+                <th className={styles.th}>HIV Test</th>
+                <th className={styles.th}>HIVST</th>
+                <th className={styles.th}>Remarks</th>
+                <th className={styles.th}>Site</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td className={styles.td}>{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</td>
+                  <td className={styles.td}>{r.full_name} {r.father_name ? `(${r.father_name})` : ''}</td>
+                  <td className={styles.td}>{r.sex} / {r.age_years ?? ''}</td>
+                  <td className={styles.td}>{r.bp_systolic != null && r.bp_diastolic != null ? `${r.bp_systolic}/${r.bp_diastolic}` : ''}</td>
+                  <td className={styles.td}>{r.pulse_rate ?? ''}</td>
+                  <td className={styles.td}>{r.temperature_c ?? ''}</td>
+                  <td className={styles.td}>{r.spo2 ?? ''}</td>
+                  <td className={styles.td}>{r.glucose_value ?? ''}</td>
+                  <td className={styles.td}>{r.bmi ?? ''} {r.bmi_category ? `(${r.bmi_category})` : ''}</td>
+                  <td className={styles.td}>{[r.bp_category].filter(Boolean).join(' / ')}</td>
+                  <td className={styles.td}>{r.breast_examination_result || '—'}</td>
+                  <td className={styles.td}>
+                    {r.hiv_test_provided ? `${r.hiv_test_provided}${r.hiv_test_result ? ` / ${r.hiv_test_result}` : ''}` : '—'}
+                  </td>
+                  <td className={styles.td}>
+                    {r.hivst_kit_given ? `${r.hivst_kit_given}${r.hivst_result ? ` / ${r.hivst_result}` : ''}` : '—'}
+                  </td>
+                  <td className={styles.td} title={r.remarks || ''}>
+                    {r.remarks ? (r.remarks.length > 30 ? `${r.remarks.substring(0, 30)}...` : r.remarks) : '—'}
+                  </td>
+                  <td className={styles.td}>{r.site_id}</td>
+                </tr>
+              ))}
+              {!rows.length && !loading && (
+                <tr>
+                  <td className={styles.td} colSpan={15}>No data</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
         <div className={styles.pagination}>
           <button className={styles.button} onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={loading || page === 0}>Prev</button>
           <button className={styles.button} onClick={() => setPage((p) => p + 1)} disabled={loading}>Next</button>
